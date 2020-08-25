@@ -3639,6 +3639,33 @@ void Rrg::setGlobalFrame(std::string frame_id) {
   if (!frame_id.empty()) visualization_->setGlobalFrame(frame_id);
 }
 
+int Rrg::findNearestFrontier(geometry_msgs::Pose target_pose){
+  //Finds the nearest frontier vertices to specified state;
+  StateVec targetState;
+  convertPoseMsgToState(target_pose, targetState);
+  std::vector<Vertex*> teleop_vertices;
+  Vertex* nearestVertex = NULL;
+  int frontierID = 0;
+  const double kRange = 3;
+  //global_graph_->getNearestVertices(&targetState, kRange, &teleop_vertices);
+  global_graph_->getNearestVertex(&targetState, &nearestVertex);
+  frontierID = nearestVertex->id;
+  //ROS_INFO_STREAM("Number of Vertices in Range - " << teleop_vertices.size());
+  // if (teleop_vertices.size() == 0){
+  //   return 0;
+  // } 
+  //frontierID = teleop_vertices[0]->id;
+  frontierID = nearestVertex->id;
+  // for (auto v : global_frontiers) {
+  //   if (v->type == VertexType::kFrontier) {
+  //     frontierID = v->id;
+  //     break;
+  //   }
+  // }
+  
+  return frontierID;
+}
+
 RobotStateHistory::RobotStateHistory() {
   kd_tree_ = NULL;
   reset();

@@ -19,6 +19,7 @@
 #include "planner_msgs/planner_set_homing_pos.h"
 #include "planner_msgs/planner_srv.h"
 #include "planner_msgs/planner_string_trigger.h"
+#include "planner_msgs/planner_teleop.h"
 
 namespace explorer {
 
@@ -33,6 +34,7 @@ class Gbplanner {
   ros::NodeHandle nh_private_;
   ros::ServiceServer planner_service_;
   ros::ServiceServer global_planner_service_;
+  ros::ServiceServer teleop_planner_service_;
   ros::ServiceServer planner_homing_service_;
   ros::ServiceServer planner_set_homing_pos_service_;
   ros::ServiceServer planner_search_service_;
@@ -66,6 +68,9 @@ class Gbplanner {
   bool globalPlannerServiceCallback(
       planner_msgs::planner_global::Request& req,
       planner_msgs::planner_global::Response& res);
+  bool teleopPlannerServiceCallback(
+      planner_msgs::planner_teleop::Request& req,
+      planner_msgs::planner_teleop::Response& res);
   bool geofenceServiceCallback(planner_msgs::planner_geofence::Request& req,
                                planner_msgs::planner_geofence::Response& res);
   bool setGlobalBound(planner_msgs::planner_set_global_bound::Request& req,

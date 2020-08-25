@@ -17,6 +17,8 @@ Gbplanner::Gbplanner(const ros::NodeHandle &nh,
 
   planner_service_ = nh_.advertiseService(
       "gbplanner", &Gbplanner::plannerServiceCallback, this);
+  teleop_planner_service_ = nh_.advertiseService(
+      "gbplanner/teleop", &Gbplanner::teleopPlannerServiceCallback, this);
   global_planner_service_ = nh_.advertiseService(
       "gbplanner/global", &Gbplanner::globalPlannerServiceCallback, this);
   planner_homing_service_ = nh_.advertiseService(
@@ -149,8 +151,21 @@ bool Gbplanner::globalPlannerServiceCallback(
     ROS_WARN("The planner is not ready.");
     return false;
   }
+  
   res.path =
       rrg_->runGlobalPlanner(req.id, req.not_check_frontier, req.ignore_time);
+  return true;
+}
+
+bool Gbplanner::teleopPlannerServiceCallback(
+    planner_msgs::planner_teleop::Request &req,
+    planner_msgs::planner_teleop::Response &res) {
+  if (getPlannerStatus() == Gbplanner::PlannerStatus::NOT_READY) {
+    ROS_WARN("The planner is not ready.");
+    return false;
+  }
+
+  res.id = rrg_->findNearestFrontier(req.pose);
   return true;
 }
 

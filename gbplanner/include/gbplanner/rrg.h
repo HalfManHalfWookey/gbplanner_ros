@@ -180,6 +180,9 @@ class Rrg {
   // Initialize some variables for later use right after loading parameters.
   void initializeParams();
 
+  //  Get the nearest frontier from a specified position
+  int findNearestFrontier(geometry_msgs::Pose target_pose);
+
  private:
   // Randomly sample a vertex from a predefined PDF, used for the local planner.
   bool sampleVertex(StateVec& state);
@@ -279,6 +282,7 @@ class Rrg {
     state[2] = pose.position.z;
     state[3] = tf::getYaw(pose.orientation);
   }
+
 
 ///--------------------
   // ROS node handle either public or private options.

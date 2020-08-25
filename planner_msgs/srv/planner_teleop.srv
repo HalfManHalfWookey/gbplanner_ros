@@ -1,0 +1,6 @@
+# REquest the planner to find frontier closest to desired location
+# Location of interest
+geometry_msgs/Pose pose
+-------------------------------
+# Closest froniter ID
+int32 id

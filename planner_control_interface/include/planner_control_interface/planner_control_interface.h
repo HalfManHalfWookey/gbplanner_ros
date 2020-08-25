@@ -32,6 +32,7 @@
 #include "planner_msgs/planner_set_exp_mode.h"
 #include "planner_msgs/planner_set_homing_pos.h"
 #include "planner_msgs/planner_srv.h"
+#include "planner_msgs/planner_teleop.h"
 
 namespace explorer {
 
@@ -58,11 +59,14 @@ class PlannerControlInterface {
   ros::Publisher planner_status_pub_;
   ros::Subscriber odometry_sub_;
   ros::Subscriber pose_sub_;
+  ros::Subscriber teleop_pose_sub_;
+  ros::Subscriber teleop_point_sub_;
   ros::Subscriber pose_stamped_sub_;
   ros::ServiceClient planner_client_;
   ros::ServiceClient planner_homing_client_;
   ros::ServiceClient planner_set_homing_pos_client_;
   ros::ServiceClient planner_global_client_;
+  ros::ServiceClient planner_teleop_client_;
   ros::ServiceClient planner_geofence_client_;
   ros::ServiceClient planner_set_exp_mode_client_;
 
@@ -94,6 +98,7 @@ class PlannerControlInterface {
   bool init_request_;
   bool global_request_;
   bool stop_planner_request_;
+  bool teleop_request_;
 
   geometry_msgs::Pose set_waypoint_;
   bool go_to_waypoint_request_;
@@ -105,6 +110,7 @@ class PlannerControlInterface {
   std::vector<geometry_msgs::Pose> current_path_;
 
   int planner_iteration_;
+  geometry_msgs::Pose teleop_pose_;
   geometry_msgs::Pose current_pose_;
   geometry_msgs::Pose previous_pose_;
   std::string world_frame_id_;
@@ -113,6 +119,10 @@ class PlannerControlInterface {
   void poseCallback(const geometry_msgs::PoseWithCovarianceStamped &pose);
   void poseStampedCallback(const geometry_msgs::PoseStamped &pose);
   void processPose(const geometry_msgs::Pose &pose);
+  void poseTeleopCallback(const geometry_msgs::PoseStamped &pose);
+  void processTeleopPose(const geometry_msgs::Pose &pose);
+  void pointTeleopCallback(const geometry_msgs::PointStamped &point);
+  void processTeleopPoint(const geometry_msgs::Point &point);
 
   bool setHomingPosCallback(planner_msgs::pci_set_homing_pos::Request &req,
                             planner_msgs::pci_set_homing_pos::Response &res);
@@ -161,6 +171,7 @@ class PlannerControlInterface {
   void run();
   void runPlanner(bool exe_path);
   void runGlobalPlanner(bool exe_path);
+  void runTeleopPlanner();
   void runHoming(bool exe_path);
   void runInitialization();
   geometry_msgs::Pose getPoseToStart();

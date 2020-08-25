@@ -21,6 +21,8 @@ PlannerControlInterface::PlannerControlInterface(
   pose_stamped_sub_ = nh_.subscribe(
       "pose_stamped", 1, &PlannerControlInterface::poseStampedCallback, this);
 
+
+
   // Services and several standard services accompanied for easier trigger.
   pci_server_ =
       nh_.advertiseService("planner_control_interface_trigger",
@@ -68,6 +70,17 @@ PlannerControlInterface::PlannerControlInterface(
   pci_std_global_server_ = nh_.advertiseService(
       "planner_control_interface/std_srvs/global_planning",
       &PlannerControlInterface::stdSrvGlobalPlannerCallback, this);
+
+  //Teleop ROS stuff
+  // Teleop Pose Subscriber
+  teleop_pose_sub_ = nh_.subscribe(
+      "teleop_pose", 1, &PlannerControlInterface::poseTeleopCallback, this);
+  teleop_point_sub_ = nh_.subscribe(
+      "clicked_point", 1, &PlannerControlInterface::pointTeleopCallback, this);
+
+  //Teleop point Subscriber (rviz Debug)
+  planner_teleop_client_ =
+      nh.serviceClient<planner_msgs::planner_teleop>("gbplanner/teleop");
 
   pci_stop_server_ = nh_.advertiseService(
       "pci_stop", &PlannerControlInterface::stopPlannerCallback, this);
@@ -323,6 +336,7 @@ bool PlannerControlInterface::init() {
   force_forward_ = true;
   init_request_ = false;
   global_request_ = false;
+  teleop_request_ = false;
   stop_planner_request_ = false;
   go_to_waypoint_request_ = false;
   // Wait for the system is ready.
@@ -343,7 +357,7 @@ void PlannerControlInterface::run() {
   bool cont = true;
   while (cont) {
     PCIManager::PCIStatus pci_status = pci_manager_->getStatus();
-    if (pci_status == PCIManager::PCIStatus::kReady) {
+    if (pci_status == PCIManager::PCIStatus::kReady)  {
       // Priority 1: Check if require homing.
       if (homing_request_) {
         homing_request_ = false;
@@ -359,7 +373,12 @@ void PlannerControlInterface::run() {
       else if (stop_planner_request_) {
         stop_planner_request_ = false;
         pci_manager_->goToWaypoint(current_pose_);
-      } // Priority 4: Local Planning.
+      } //NEW PRIORITY: Teleoperation.
+      else if(teleop_request_){
+        teleop_request_=false;
+        ROS_INFO_STREAM("PlannerControlInterface: Running Teleop");
+        runTeleopPlanner();
+      }// Priority 4: Local Planning.
       else if ((trigger_mode_ == PlannerTriggerModeType::kAuto) || (run_en_)) {
         run_en_ = false;
         ROS_INFO_STREAM(
@@ -396,6 +415,7 @@ void PlannerControlInterface::runGlobalPlanner(bool exe_path = false) {
   plan_srv.request.not_check_frontier =
       pci_global_request_params_.not_check_frontier;
   plan_srv.request.ignore_time = pci_global_request_params_.ignore_time;
+  ROS_INFO("Attempting Global planner");
   if (planner_global_client_.call(plan_srv)) {
     if ((exe_path) && (!plan_srv.response.path.empty())) {
       // Execute path.
@@ -411,6 +431,20 @@ void PlannerControlInterface::runGlobalPlanner(bool exe_path = false) {
   } else {
     ROS_WARN_THROTTLE(1, "Planner service failed");
     ros::Duration(0.5).sleep();
+  }
+}
+
+void PlannerControlInterface::runTeleopPlanner(){
+  planner_msgs::planner_teleop plan_srv;
+  plan_srv.request.pose = teleop_pose_;
+  if((planner_teleop_client_.call(plan_srv))) {
+    if (!plan_srv.response.id == 0) {
+      ROS_INFO_STREAM("Closest Frontier to Target: " << plan_srv.response.id);
+      planner_msgs::pci_global global_srv;
+      pci_global_request_params_.id = plan_srv.response.id;
+      exe_path_en_ = true;
+      global_request_ = true;
+    }
   }
 }
 
@@ -601,9 +635,44 @@ void PlannerControlInterface::poseCallback(
 }
 
 void PlannerControlInterface::poseStampedCallback(
-    const geometry_msgs::PoseStamped &pose) {
+  const geometry_msgs::PoseStamped &pose) {
   processPose(pose.pose);
 }
+
+// TODO: Change this subscriber callback to a service
+void PlannerControlInterface::poseTeleopCallback(
+  const geometry_msgs::PoseStamped &pose) {
+    processTeleopPose(pose.pose);
+}
+
+void PlannerControlInterface::processTeleopPose(const geometry_msgs::Pose &pose) {
+  teleop_pose_.position.x = pose.position.x;
+  teleop_pose_.position.y = pose.position.y;
+  teleop_pose_.position.z = pose.position.z;
+  teleop_pose_.orientation.x = pose.orientation.x;
+  teleop_pose_.orientation.y = pose.orientation.y;
+  teleop_pose_.orientation.z = pose.orientation.z;
+  teleop_pose_.orientation.w = pose.orientation.w;
+  teleop_request_ = true;
+}
+
+// pointTeleopCallback - Useful for rviz debugging
+void PlannerControlInterface::pointTeleopCallback(
+  const geometry_msgs::PointStamped &point) {
+    processTeleopPoint(point.point);
+}
+
+void PlannerControlInterface::processTeleopPoint(const geometry_msgs::Point &point) {
+  teleop_pose_.position.x = point.x;
+  teleop_pose_.position.y = point.y;
+  teleop_pose_.position.z = point.z;
+  teleop_pose_.orientation.x = 0;
+  teleop_pose_.orientation.y = 0;
+  teleop_pose_.orientation.z = 0;
+  teleop_pose_.orientation.w = 1;
+  teleop_request_ = true;
+}
+
 
 void PlannerControlInterface::processPose(const geometry_msgs::Pose &pose) {
   current_pose_.position.x = pose.position.x;

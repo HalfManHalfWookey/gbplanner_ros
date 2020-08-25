@@ -11,6 +11,7 @@ add_service_files(
   FILES
   planner_srv.srv
   planner_global.srv
+  planner_teleop.srv
   planner_search.srv
   planner_homing.srv
   planner_set_homing_pos.srv
